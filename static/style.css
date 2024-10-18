@@ -1,0 +1,632 @@
+@charset "UTF-8";
+@keyframes pulse{
+    0%{
+      opacity: 1;
+      transform: scale(1);
+    }
+    100%{
+      opacity: 0.25;
+      transform: scale(0.75);
+    }
+}
+
+/*---共通部分---*/
+html {
+    font-size: 100%;
+    width:100%;
+    -webkit-appearance: none;  
+}
+body{
+    width:100%;
+    margin: 0;
+    padding: 0;
+    background-color: #ebf1ee;
+    font-family: sans-serif ;
+}
+.button{
+    font-size: 2rem;
+    height:4ex;
+    width:8ch;
+    color: #303030;
+}
+#main{
+    width:100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 3rem;
+}
+/*---ヘッダー---*/
+#header{
+    background-color: #006e85;
+    color:#ebf1ee;
+    width:100%;
+    position: fixed;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+}
+#header > a{
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    text-decoration: none;
+}
+#header > a > img{
+    margin-right: 0.5rem;
+    margin-left: 0.5rem;
+}
+#header > a > div{
+    font-size:1.5rem;
+    color:#ebf1ee;
+    font-family: "Kaisei Decol", serif;
+    font-weight: 400;
+    font-style: normal;
+}
+.header_wrapper{
+    display: flex;
+    flex-direction: row;
+    justify-content: right;
+    align-items: center;
+    font-size: 1rem;
+    padding: 0.3rem;
+}
+.header_button{
+    height:2rem;
+    background-color:#00000000;
+    color:#a4f0ff;
+    border:none;
+    display:block;
+    margin-left:0.5rem;
+}
+.header_button:hover{
+    color:#003e4b;
+}
+
+/*---TOP画面｜フォーム---*/
+#top_form{
+    width:100%;
+    padding-top:4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#top_form > form{
+    width: 100%;
+    max-width: 800px;
+    background-color: #a7c4c9;
+    padding-bottom: 1%;
+}
+
+.tab_container{
+    width :100%;
+    height: 3.5rem;
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: center;
+    background-color: #628c94;
+}
+.tab{
+    width: 50%;
+    height: 3.5rem;
+    font-size:1.5rem;
+    color: #595959;
+    border: none;
+}
+.light{
+    color: #628c94;
+    background-color: #a7c4c9;
+}
+.dark{
+    color: #a7c4c9;
+    background-color: #628c94;
+}
+.top_form_p{
+    font-size:1.2rem;
+    color: #595959;
+}
+#top_form .text_field{
+    font-size:1.5rem;
+    width:87%;
+}
+#top_form > form > p > .button{
+    color: #ebf1ee;
+    background-color:#006e85;
+}
+#top_form > form > p > .button:hover{
+    color: #ebf1ee;
+    background-color:#004857;
+}
+textarea{
+    font-size:1rem;
+    resize: none;
+    width: 87%;
+}
+.front_error{
+    color:#ff314d;
+}
+.gnt_state_view{
+    width: 100%;
+    max-width: 800px;
+    background-color: #a7c4c9;
+    padding-top: 8%;
+    padding-bottom: 8%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: #595959;
+
+}
+.gnt_wrapper > .surver_error_msg{
+    font-size:1.5rem;
+    color:#ff314d;
+}
+
+
+/*---TOP画面｜生成済みの単語帳---*/
+#top_list{
+    width:100%;
+    text-align:center;
+    padding-top: 10vh;
+    padding-bottom:10vh;
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+h3{
+    font-size:2rem;
+    color: #006e85;
+    margin: 0;
+}
+/*検索窓*/
+#top_list > form{
+    font-size:1.5rem;
+    width: 100%;
+    max-width: 800px;
+    height: 3rem;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+}
+#top_list > form > .text_field{
+    font-size: 1.3rem;
+    width: 50%;
+}
+#top_list > form > .search_button{
+    font-size: 1.2rem;
+    width: 5rem;
+    margin-left: 0.5rem;
+    color: #303030;
+    background-color: #cacaca;
+
+}
+.flashcard_group_list_msg{
+    font-size:1.2rem;
+    color: #595959;
+    margin-bottom: 0.5rem;
+}
+.container{
+    width: 800px;
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.button_top_list{
+    font-size:1.5rem;
+    height: 4rem;
+    color: #303030;
+    background-color:#a7c4c9;
+    border:none;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.button_top_list:hover{
+    background-color:#628c94;
+}
+#users_list{
+    width:100%;
+    text-align:center;
+    padding-top: 10vh;
+    padding-bottom:10vh;
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+/*---モーダル表示---*/
+#overlay{
+    /*要素を重ねた時の順番*/
+    z-index:1;
+  
+    /*画面全体を覆う設定*/
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background-color:rgba(0,0,0,0.5);
+  
+    /*画面の中央に要素を表示させる設定*/
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#modal{
+    z-index:2;
+    width:850px;
+    height:80vh;
+    background:#ebf1ee;
+    border: solid 4px;
+    border-color:#006e85;
+}
+#modal .button_close{
+    background-color:#006e85;
+    border: none;
+    color:#ebf1ee;
+    font-size: 1.5rem;
+    height:3ex;
+    width:3ch;
+    margin: 0 0 auto auto;
+    display: block;
+}
+.wrapper{
+    box-sizing: border-box;
+    width:100%;
+    height:93%;
+    padding:3% 5%;
+}
+.modalmain{
+    box-sizing: border-box;
+    text-align: center;
+    margin-top:0;
+    margin-bottom:5%;
+    width:100%;
+    height:50vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    
+}
+.modalfoot{
+    margin-bottom:0;
+    height:15%;
+}
+
+/*---notification(生成中、生成完了、エラー）---*/
+.notification{
+    height:80%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.notification > .notification_title{
+    font-size:5rem;
+    color: #595959;
+}
+.notification > .surver_error_msg{
+    font-size:2.5rem;
+    color:#ff314d;
+}
+.button_start{
+    background-color: #ffbc2a;
+}
+.button_start:hover{
+    background-color: #bd8a1e;
+}
+.button_delete{
+    font-size: 1.5rem;
+    color: #303030;
+    background-color: #8d8d8d;
+    margin-top:5vh;
+}
+.button_delete:hover{
+    font-size: 1.5rem;
+    background-color: #595959;
+    margin-top:5vh;
+}
+/* PULSE BUBBLES */
+.spinner-box {
+    width: 300px;
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+}
+.pulse-container {
+    width: 60%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.pulse-bubble {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background-color: #006e85;
+}
+.pulse-bubble-1 {
+    animation: pulse 0.4s ease 0s infinite alternate;
+    
+}
+.pulse-bubble-2 {
+    animation: pulse 0.4s ease .2s infinite alternate;
+}
+.pulse-bubble-3 {
+    animation: pulse 0.4s ease .4s infinite alternate;
+}
+
+/*---単語帳実行：用語表示---*/
+.word{
+    color: #595959;
+    word-break: break-word;
+}
+.yellow{
+    background-color: #ffbc2a;
+    color:#595959;
+    margin: 0 auto;
+    display: block;
+}
+.word_large{
+    font-size:5rem;
+}
+.word_small{
+    font-size:2rem;
+}
+
+/*---単語帳実行：説明表示---*/
+.explanation_title{
+    margin-top:0;
+    color: #595959;
+    word-break: break-word;
+}
+.title_large{
+    font-size:3rem;
+    line-height:3rem;
+}
+.title_small{
+    font-size:1.5rem;
+    line-height:1.5rem;
+}
+.explanation{
+    height: 100%;
+    font-size:1.5rem;
+    text-align:left;
+    overflow-y:auto;
+    word-break: break-word;
+}
+.container_button{
+    display: flex;
+    flex-direction: row;
+}
+.button_right{
+    background-color: #ffbc2a;
+    color:#595959;
+    margin: 0 0 auto auto;
+    display: block;
+}
+.button_left{
+    background-color: #ffbc2a;
+    color:#595959;
+    margin: 0 auto auto 0;
+    display: block;
+}
+.button_right:disabled{
+    background-color: #463d2a;
+}
+.button_left:disabled{
+    visibility:hidden;
+}
+
+/*---MENU---*/
+#menu_box{
+    background-color:#00303adc;
+    color:#a4f0ff;
+    width:400px;
+    height:100vh;
+    z-index:1;
+    position:fixed;
+    top:2.5rem;
+    left:0px;
+
+}
+.slide-enter-active, .slide-leave-active {
+    transition: transform 0.5s ease;
+}
+
+.slide-enter-from {
+    transform: translateX(-100%);
+}
+
+.slide-leave-to {
+    transform: translateX(-100%);
+}
+
+.menu_list > li{
+    margin-top:1.5rem;
+    margin-bottom:1.5rem;
+}
+.menu_list > li > a{
+    font-size:1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+    color:#ebf1ee; 
+}
+.menu_list > li > a:hover{
+    color:#ffbc2a; 
+}
+
+/*---ログイン時モーダル---*/
+#overlay_white{
+    /*要素を重ねた時の順番*/
+    z-index:1;
+  
+    /*画面全体を覆う設定*/
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background-color:#ebf1eec4;
+  
+    /*画面の中央に要素を表示させる設定*/
+
+}
+#welcome{
+    z-index:2;
+    position:fixed;
+    width:600px;
+    height:600px;
+    background-color:#a4f0ff;
+    top:0px;
+    left:0px;
+
+}
+.login-enter-active, .login-leave-active {
+    transition: transform 1s ease;
+}
+.login-enter-from {
+    transform: translateX(-100%);
+}
+
+.login-leave-to {
+    transform: translateX(-100%);
+}
+
+/*---フッター---*/
+#footer{
+    background-color: #8d9a9c;
+    color:#ebf1ee;
+    width:100%;
+    height: 5rem;
+    padding-top:1rem;
+}
+
+@media screen and (max-width: 959px) {
+	/* 959px以下に適用されるCSS（タブレット用） */
+    form{
+        width:90%;
+    }
+    .container{
+        width: 90%;
+    }
+    h1{
+        font-size:2rem;
+    }
+    #modal{
+        width: 90%;
+    }
+    .modalmain{
+        height:50vh;
+    }
+    .button{
+        font-size: 2rem;
+        height:4ex;
+        width:8ch;
+    }
+    .word_large{
+        font-size:3.5rem;
+    }
+    .word_small{
+        font-size:1.3rem;
+    }
+    .title_large{
+        font-size:2rem;
+        line-height:2rem;
+    }
+    .title_small{
+        font-size:1rem;
+        line-height:1rem;
+    }
+
+}
+@media screen and (max-width: 480px) {
+	/* 480px以下に適用されるCSS（スマホ用） */
+    form{
+        width:98%;
+    }
+    .container{
+        width: 98%;
+    }
+    h1{
+        font-size:1.2rem;
+    }
+    .tab{
+        font-size:0.8rem;
+    }
+    .top_form_p{
+        font-size:0.8rem;
+        color: #595959;
+    }
+    #top_form .text_field{
+        font-size:1rem;
+    }
+    #top_list > form > .text_field{
+        font-size: 0.8rem;
+        width: 50%;
+    }
+    #top_list > form > .search_button{
+        font-size: 0.6rem;
+        width: 3rem;
+        margin-left: 0.5rem;
+        color: #303030;
+        background-color: #cacaca;
+    
+    }
+    .flashcard_group_list_msg{
+        font-size:0.8rem;
+        color: #595959;
+        margin-bottom: 0.5rem;
+    }
+    h3{
+        font-size:1.2rem;
+    }
+    .button_top_list{
+        font-size:1rem;
+    }
+    #modal{
+        width: 95%;
+    }
+    .modalmain{
+        height:50vh;
+    }
+    .notification > .notification_title{
+        font-size: 2rem;
+    }
+    .word_large{
+        font-size:2.5rem;
+    }
+    .word_small{
+        font-size:1rem;
+    }
+    .title_large{
+        font-size:1rem;
+        line-height:1rem;
+    }
+    .title_small{
+        font-size:0.7rem;
+        line-height:0.7rem;
+    }
+    .explanation{
+        height: 100%;
+        font-size:1rem;
+        text-align:left;
+        overflow-y:auto;
+        word-break: break-word;
+    }
+    .button{
+        font-size: 1.4rem;
+        height:4ex;
+        width:8ch;
+    }
+}

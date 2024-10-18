@@ -1,0 +1,512 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>単語帳自動生成サービス</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.2/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='normalize.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Kaisei+Decol&family=Klee+One&display=swap" rel="stylesheet">  
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- ヘッダー -->
+    <div id="header">
+      <a href="#top_form" @mouseenter="showMenu">
+        <img src="{{ url_for('static', filename='/img/icon_top_mini.png') }}">
+        <div>単語帳自動生成サービス</div>
+      </a>
+      <div class="header_wrapper" v-if="!loggedIn">
+        <button class="header_button" @click="currentModalState=MODAL_STATES.login_form">ログイン</button>
+        <button class="header_button" @click="currentModalState=MODAL_STATES.register_form">新規登録</button>
+      </div>
+      <div class="header_wrapper" v-else>
+        <div>((loggedIn.user_name)) さん</div>
+        <button class="header_button" @click="logout()">ログアウト</button>
+      </div>
+    </div>
+
+    <div id="main">
+
+    <!-- TOP画面　：　生成フォーム -->
+    <div id="top_form">
+      
+      <h3>単語帳を生成する</h3>
+
+      <p v-if="loggedIn==false">単語帳の生成にはログインが必要です。</p>
+
+      <form @submit.prevent="generateWordlist()" v-if="currentGenerationState == GENERATION_STATES.available & loggedIn != false">
+
+        <!--タブ-->
+        <div class="tab_container">
+          <button type='button' v-on:click="currentInputMode=INPUT_MODE.theme; frontError=false;" style="padding-right: 20px;" class="tab"
+          v-bind:class="{'light':currentInputMode==INPUT_MODE.theme, 
+                        'dark':currentInputMode==INPUT_MODE.article}">テーマから生成</button>
+          <button type='button' v-on:click="currentInputMode=INPUT_MODE.article; frontError=false;" class="tab"
+          v-bind:class="{'light':currentInputMode==INPUT_MODE.article,
+                        'dark':currentInputMode==INPUT_MODE.theme}">文章から抽出</button>
+        </div>
+
+        <!--テーマモードの表示物-->
+        <div v-if="currentInputMode==INPUT_MODE.theme">
+          <p class="top_form_p">指定されたテーマで単語帳を生成します。</p>
+          <input class="text_field" type="text" placeholder="テーマを入力してください。" v-model="inputText.theme"><br>
+          <p>生成する単語数（1~20）：
+          <input class="num_field" type="number" v-model="wordNum" min="1" max="20"></p>
+          <p class="frontError" v-if=frontError v-text="frontErrorMsg"></p>
+
+        </div>
+
+        <!--文章モードの表示物-->
+        <div v-if="currentInputMode==INPUT_MODE.article">
+          <p class="top_form_p">入力された文章から重要語句を抽出して単語帳を生成します。</p>
+          <textarea rows="24" cols="60" v-model="inputText.article" placeholder="文章を入力してください。"></textarea>
+          <p>生成する単語数（1~20）：
+          <input class="num_field" type="number" v-model="wordNum" min="1" max="20"></p>
+          <p class="frontError" v-if=frontError v-text="frontErrorMsg"></p>
+
+        </div>
+
+        <!--生成ボタン（モード共通）-->
+        <p><input class="button_center button" type="submit" value="生成" ></p>
+      </form>
+
+      <div class="gnt_state_view" v-if="currentGenerationState != GENERATION_STATES.available">
+
+        <!-- 生成中表示 -->
+        <div class="gnt_wrapper" v-if="currentGenerationState == GENERATION_STATES.generating">
+          <p class="gnt_state_text">生成中…</p>
+          <div class="spinner-box">
+            <div class="pulse-container">  
+              <div class="pulse-bubble pulse-bubble-1"></div>
+              <div class="pulse-bubble pulse-bubble-2"></div>
+              <div class="pulse-bubble pulse-bubble-3"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 生成完了表示 -->
+        <div class="gnt_wrapper" v-else-if="currentGenerationState == GENERATION_STATES.complete">
+          <p class="gnt_state_text">生成完了</p>
+          <button class="button button_start" @click="getSavedWordlist(usersFlashcardGroupList[0].id); playing=usersFlashcardGroupList[0]; currentGenerationState=GENERATION_STATES.available">開始</button>
+        </div>
+
+        <!-- 生成エラー -->
+        <div class="gnt_wrapper" v-else-if="currentGenerationState == GENERATION_STATES.error">
+          <p class="gnt_state_text">エラー</p>
+          <p class="surver_error_msg" v-text=surverErrorMsg></p>
+          <button class="button" @click="restart(); currentGenerationState=GENERATION_STATES.available;">TOPへ</button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!--TOP画面　：　生成済みの単語帳-->
+    <div id="top_list">
+      <h3>生成済みの単語帳を使う</h3>
+
+      <!-- 検索窓 -->
+      <form @submit.prevent="searchWordlist()">
+        <input class="text_field" type="text" placeholder="キーワードを入力してください。" v-model="keyword">
+        <input class="search_button" type="submit" value="検索" >
+        <button class="search_button" type='button' @click="clearKeyword(); keyword=''" >クリア</button>
+      </form>
+
+      <div class="flashcard_group_list_msg" v-text="flashcardGroupListMessage"></div>
+
+      <!-- 生成済み単語帳一覧 -->
+      <div class="container">
+        <button v-for="pair in flashcardGroupList" @click="getSavedWordlist(pair.id); playing=pair;" v-text="pair.name" class="button_top_list" style="width: 96%;"></button>
+      </div>
+    </div>
+
+    <!--TOP画面　：　自作の単語帳-->
+    <div id="users_list" v-if="loggedIn != false">
+      <h3>自作の単語帳</h3>
+
+      <div class="flashcard_group_list_msg" v-if="usersFlashcardGroupList != false">((loggedIn.user_name)) さんが作成した単語帳を表示しています。</div>
+      <div class="flashcard_group_list_msg" v-else>((loggedIn.user_name)) さんが作成した単語帳はまだありません。</div>
+
+      <!-- 単語帳一覧 -->
+      <div class="container">
+        <button v-for="pair in usersFlashcardGroupList" @click="getSavedWordlist(pair.id); playing=pair;" v-text="pair.name" class="button_top_list" style="width: 96%;"></button>
+      </div>
+    </div>
+
+    <!-- モーダル表示 -->
+    <div id="overlay" v-if="currentModalState !== MODAL_STATES.invisible">
+      <div id="modal">
+        <button class="button_close" @click="restart" v-if="currentModalState !== MODAL_STATES.loading">✕</button>
+
+        <!-- 通信中表示 -->
+        <div class="notification wrapper" v-if="currentModalState == MODAL_STATES.loading">
+          <p class="notification_title">通信中…</p>
+          <div class="spinner-box">
+            <div class="pulse-container">  
+              <div class="pulse-bubble pulse-bubble-1"></div>
+              <div class="pulse-bubble pulse-bubble-2"></div>
+              <div class="pulse-bubble pulse-bubble-3"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 生成済み単語帳実行確認表示 -->
+        <div class="notification wrapper" v-else-if="currentModalState == MODAL_STATES.title_view">
+          <p class="word" v-bind:class="{'word_large':playing.name.length < 25, 'word_small':playing.name.length >= 25}" v-text="playing.name"></p>
+          <button class="button button_start" @click="currentModalState=MODAL_STATES.word_view; setCharSize(wrapNumWord)">開始</button>
+        </div>
+
+        <!-- 単語帳実行中：問題表示 -->
+        <div class="wrapper" v-else-if="currentModalState == MODAL_STATES.word_view">
+          <div class="modalmain">
+            <p class = "word" v-text="items[currentIndex].word" v-bind:class="{'word_large':!isSmall, 'word_small':isSmall}"></p>
+          </div>
+          <div class="modalfoot">
+            <button class="button yellow" @click="currentModalState ++; setCharSize(wrapNumTitle)">答え</button>
+          </div>
+        </div>
+
+        <!-- 単語帳実行中：解答表示 -->
+        <div class="wrapper" v-else-if="currentModalState == MODAL_STATES.description_view">
+          <div class="modalmain">
+            <p class="explanation_title" v-text="items[currentIndex].word" v-bind:class="{'title_large':!isSmall, 'title_small':isSmall}"></p>
+            <p class="explanation" v-text="items[currentIndex].description"></p>
+          </div>
+          <div class="modalfoot container_button">
+            <button class="button button_left" v-on:click="decrease":disabled="currentIndex==0">前へ</button>
+            <p class="footer" v-text="String(currentIndex+1) + '/' + String(items.length)"></p>
+            <button class="button button_right" @click="increase" v-if="currentIndex !== items.length - 1">次へ</button>
+            <button class="button button_right" @click="restart" v-if="currentIndex == items.length - 1">終了</button>
+          </div>
+        </div>
+
+        <!-- ログインフォーム -->
+        <div class="form_wrapper" v-else-if="currentModalState == MODAL_STATES.login_form">
+          <form @submit.prevent="login()">
+            <input class="text" type="text" placeholder="ユーザー名" v-model="loginInput.name"><br>
+            <input class="text" type="password" placeholder="パスワード" v-model="loginInput.password"><br>
+            <input class="button" type="submit" value="ログイン" >
+          </form>
+        </div>
+
+        <!-- 新規登録フォーム -->
+        <div class="form_wrapper" v-else-if="currentModalState == MODAL_STATES.register_form">
+          <form @submit.prevent="register()">
+            <input class="text" type="text" placeholder="ユーザー名" v-model="loginInput.name"><br>
+            <input class="text" type="password" placeholder="パスワード" v-model="loginInput.password"><br>
+            <p class="surver_error_msg" v-text=surverErrorMsg></p><br>
+            <input class="button" type="submit" value="新規登録" >
+          </form>
+        </div>
+
+        <!-- エラー -->
+        <div class="notification" v-else-if="currentModalState == MODAL_STATES.error">
+          <p class="notification_title">エラー</p>
+          <p class="surver_error_msg" v-text=surverErrorMsg></p>
+          <button class="button" @click="restart">TOPへ</button>
+        </div>
+        
+      </div><!--\div modal-->
+    </div><!--\div overlay-->
+
+    </div><!--/div main-->
+
+    <!--フッター-->
+    <div id="footer"></div>
+
+    <!--MENU-->
+    <transition name="slide">
+    <div id="menu_box" v-if="currentMenuStatus" @mouseleave="hideMenu">
+      <div class="menu_wrapper">
+        <ul class="menu_list">
+          <li>
+            <a href="#top_form" @click="hideMenu">単語帳を生成する</a>
+            <p>
+              テーマに沿った単語帳をGPT-4で自動生成します。<br>
+              テキストを要約して生成することもできます。<br>
+              生成には数分かかる場合があります。<br>
+              生成機能のご利用にはユーザー登録が必要です。
+            </p>
+          </li>
+          <li>
+            <a href="#top_list" @click="hideMenu">生成済みの単語帳を使う</a>
+            <p>
+              生成済みの単語帳を利用できます。
+              キーワードに部分一致する単語帳の検索も可能です。
+            </p>
+          </li>
+          <li v-if="loggedIn">
+            <a href="#users_list" @click="hideMenu">自作の単語帳</a>
+            <p>((loggedIn.user_name)) さんが過去に作成した単語帳一覧です。</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+    </transition><!--/div menu_box-->
+
+  </div><!--\div app-->
+
+  <script>
+    const app = {
+      el: '#app',
+      delimiters: ["((","))"],
+      data() { 
+        return{
+        loggedIn: false,
+        loginInput: {'name':'', 'password':''},
+        inputText: {'theme':'', 'article':''},
+        GENERATION_STATES: Object.freeze({
+          available: 1,
+          generating: 2,
+          complete: 3,
+          error: 4
+        }),
+        currentGenerationState: 1,
+        MODAL_STATES: Object.freeze({
+          invisible: 1,
+          title_view: 2,
+          word_view: 3,
+          description_view: 4,
+          login_form: 10,
+          register_form: 11,
+          loading: 99,
+          error: 100
+        }),
+        currentModalState: 1,
+        items: [], // 実行中の単語帳が格納された配列
+        currentIndex: 0, //itemsの何番目の用語が表示されるか
+        frontError: false, //フロントエンドでエラーが出ているか
+        frontErrorMsg: '', //フロントエンドのエラーメッセージ
+        surverErrorMsg: '', //バックエンドのエラーメッセージ
+        isSmall: false, //文字サイズを小さくするかどうか
+        wrapNumWord: 10, //折り返しの文字数（用語）
+        wrapNumTitle: 20, //折り返しの文字数（タイトル用語）
+        flashcardGroupList: {}, //生成済みの単語帳リスト
+        playing: '', //表示中の単語帳のグループid
+        wordNum: 10, //生成時の単語数のデフォルト設定
+        INPUT_MODE: Object.freeze({
+          theme: 1, //テーマから生成モード
+          article: 2  //文章から抽出モード
+        }),
+        currentInputMode: 1, //現在の入力モード
+        keyword: '', //検索のキーワード
+        defaultFlashcardGroupListMessage: '最新の５件を表示しています。',
+        flashcardGroupListMessage: '',
+        currentMenuStatus: false,
+        login_effect:false,
+        }
+      },
+      mounted(){
+        this.$nextTick(function () {
+        this.flashcardGroupList = JSON.parse('{{ list_flask|tojson }}')}); //ページの描画時に生成済みの単語帳リストを受け取る
+        this.$nextTick(function () {
+        this.usersFlashcardGroupList = JSON.parse('{{ list_users|tojson }}')});
+        this.flashcardGroupListMessage = this.defaultFlashcardGroupListMessage;
+        this.$nextTick(function () {
+        this.loggedIn = JSON.parse('{{ logged_in|tojson }}')});
+      },
+      methods: {
+        login(){
+          fetch('/api/login', {method: 'post',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify(this.loginInput)})
+                     .then(response => response.json())
+                     .then(data => {
+                        this.loggedIn = data.logged_in;
+                        if (data.status == 'success'){
+                          this.currentModalState = this.MODAL_STATES.invisible;
+                          this.usersFlashcardGroupList = data.list_users;
+                          setTimeout(() => {
+                            window.location.reload(true);
+                            }, 1000);
+                          
+                        }
+                        else{
+                          this.surverErrorMsg = data.error;
+                        }
+                     })
+                     .catch(error => {
+                        console.error(error);
+                     });
+        },
+        logout(){
+          fetch('/api/logout', {method: 'post',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify(this.loginInput)})
+                     .then(response => response.json())
+                     .then(data => {
+                        this.loggedIn = data.logged_in;
+                        this.loginInput = {'name':'', 'password':''};
+                        this.usersFlashcardGroupList = {};
+                        window.location.reload(true);
+                     })
+                     .catch(error => {
+                        console.error(error);
+                     });
+        },
+        register(){
+          fetch('/api/register', {method: 'post',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify(this.loginInput)})
+                     .then(response => response.json())
+                     .then(data => {
+                        this.loggedIn = data.logged_in;
+                        if (data.status == 'success'){
+                          this.currentModalState = this.MODAL_STATES.invisible;
+                        }
+                        else{
+                          this.surverErrorMsg = data.error;
+                        }
+                     })
+                     .catch(error => {
+                        console.error(error);
+                     });
+        },
+        generateWordlist() {
+          ///
+          ///　wordlist生成を依頼
+          ///　
+
+          // 現在のモードを取得（テーマor文章）
+          mode = Object.keys(this.INPUT_MODE).find((key) => this.INPUT_MODE[key] === this.currentInputMode);
+
+          // バリデーション
+          if (this.inputText[mode] == ''){ //モードに合った入力が無い場合
+            this.frontError = true;
+            this.frontErrorMsg = 'テーマまたは文章を入力してください'
+            return
+          }
+          if (this.wordNum < 1 || this.wordNum > 20){ //範囲外の単語数が指定されている場合
+            this.frontError = true;
+            this.frontErrorMsg = '単語数は1から20の範囲で指定してください'
+            return
+          }
+          
+          this.currentGenerationState = this.GENERATION_STATES.generating;
+          request = {"mode":mode, "input": this.inputText[mode], "num":this.wordNum};
+
+          // API
+          fetch('/api/generate_wordlist', {method: 'post',
+                                      headers: {'Content-Type': 'application/json'},
+                                      body: JSON.stringify(request)})
+                     .then(response => response.json())
+                     .then(data => {
+                        // 通信成功（生成失敗）
+                        if(data.error){
+                          this.surverErrorMsg = data.error;
+                          this.currentGenerationState = this.GENERATION_STATES.error;
+                        }
+                        // 通信成功（生成成功）
+                        else{
+                          this.flashcardGroupList = data.flashcard_group_list;
+                          this.usersFlashcardGroupList = data.list_users;
+                          this.inputText.theme ='';
+                          this.inputText.article ='';
+                          this.currentGenerationState = this.GENERATION_STATES.complete;
+                        }
+                     })
+                     .catch(error => {
+                        // 通信失敗
+                        console.error('Error:', error);
+                        this.surverErrorMsg = '通信に失敗しました。'
+                        this.currentGenerationState = this.GENERATION_STATES.error;
+                        return;
+                     });
+        },
+        getSavedWordlist(group_id){
+          ///
+          ///　DBから既存のwordlistを取得するAPI
+          ///
+
+          this.currentModalState = this.MODAL_STATES.loading;
+          // サーバーから配列を取得する
+          fetch('/api/get_saved_wordlist', {method: 'post',
+                                      headers: {'Content-Type': 'application/json'},
+                                      body: JSON.stringify({"group_id": group_id})})
+                     .then(response => response.json())
+                     .then(data => {
+                        this.items = data;
+                        this.currentModalState = this.MODAL_STATES.title_view;
+                     })
+                     .catch(error => {
+                        console.error('Error:', error);
+                        this.surverErrorMsg = '通信に失敗しました。'
+                        this.currentModalState = this.MODAL_STATES.error;
+                        return;
+                     });
+        },
+        restart(){ //モーダルを閉じた際に各変数を初期化して最初の状態に戻す
+          this.currentModalState = this.MODAL_STATES.invisible;
+          this.currentIndex = 0;
+          this.frontError = false;
+          this.surverErrorMsg = '';
+          this.items = [];
+          this.inputText.theme ='';
+          this.inputText.article ='';
+          this.wordNum = 10;
+          this.currentInputMode = 1;
+        },
+        setCharSize(num){ //引数の数字よりも字数が多ければtrue
+          size = this.items[this.currentIndex].word.length;
+          this.isSmall = (size >= num) ? true : false;
+        },
+        increase(){ //単語帳で次のページを表示する
+          this.currentModalState = this.MODAL_STATES.word_view;
+          this.currentIndex ++;
+          this.setCharSize(this.wrapNumWord);
+        },
+        decrease(){ //単語帳で前のページを表示する
+          this.currentModalState = this.MODAL_STATES.word_view;
+          this.currentIndex --;
+          this.setCharSize(this.wrapNumWord);
+        },
+        searchWordlist(){
+          ///
+          ///　キーワードを含む既存のwordlistを取得するAPI
+          ///
+
+          // サーバーから配列を取得する
+          this.currentModalState = this.MODAL_STATES.loading;
+
+          fetch('/api/search_wordlist', {method: 'post',
+                                      headers: {'Content-Type': 'application/json'},
+                                      body: JSON.stringify({"keyword": this.keyword})})
+                     .then(response => response.json())
+                     .then(data => {
+                        this.flashcardGroupListMessage = data.result;
+                        this.flashcardGroupList = data.flashcard_group_list;
+                        this.currentModalState = this.MODAL_STATES.invisible;
+                     })
+                     .catch(error => {
+                        console.error('Error:', error);
+                        this.surverErrorMsg = '通信に失敗しました。'
+                        this.currentModalState = this.MODAL_STATES.error;
+                        return;
+                     });
+        },
+        clearKeyword(){
+          this.flashcardGroupList = JSON.parse('{{ list_flask|tojson }}');
+          this.flashcardGroupListMessage = this.defaultFlashcardGroupListMessage;
+        },
+        showMenu(){
+          this.currentMenuStatus = true;
+        },
+        hideMenu(){
+          this.currentMenuStatus = false;
+        }
+      }
+    };
+
+    Vue.createApp(app).mount('#app');
+
+  </script>
+</body>
+</html>
